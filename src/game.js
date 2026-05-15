@@ -232,6 +232,18 @@ export class ReverseAnalysisGame {
     this.ending = ending;
     this.audio = new AudioManager();
     this.calloutTimer = null;
+    this.characters = {
+      player: null,
+      npc: null,
+    };
+    this.playerTransientPortraitMode = null;
+    this.activePlayerPortraitMode = "default";
+    this.playerPortraitAssets = {
+      objection: "assets/images/portraits/call_out.png",
+      rejection: "assets/images/portraits/rejection.png",
+      wait: "assets/images/portraits/wait.png",
+      welldone: "assets/images/portraits/welldone.png",
+    };
 
     this.state = {
       save: this.loadSave(),
@@ -246,6 +258,7 @@ export class ReverseAnalysisGame {
       pendingStageRetry: null,
       bufferedLines: [],
       afterBufferedLines: null,
+      bufferedContext: null,
       typing: {
         active: false,
         timer: null,
@@ -688,8 +701,11 @@ export class ReverseAnalysisGame {
     this.state.pendingStageRetry = null;
     this.state.bufferedLines = [];
     this.state.afterBufferedLines = null;
+    this.state.bufferedContext = null;
     this.state.credibility = caseData.maxCredibility;
     this.state.ownedEvidence = [...caseData.initialEvidence];
+    this.playerTransientPortraitMode = null;
+    this.activePlayerPortraitMode = "default";
 
     this.applyScreenBackdrop(this.refs.screens.game, caseData.sceneAsset || MENU_BACKDROP);
     this.refs.dialoguePanel.classList.remove("shake");
@@ -753,6 +769,8 @@ export class ReverseAnalysisGame {
   }
 
   configurePortrait(side, character) {
+    this.characters[side] = character;
+
     const imageNode = side === "player" ? this.refs.portraitPlayerImage : this.refs.portraitNpcImage;
     const glyphNode = side === "player" ? this.refs.portraitPlayerGlyph : this.refs.portraitNpcGlyph;
     const nameNode = side === "player" ? this.refs.portraitPlayerName : this.refs.portraitNpcName;
@@ -763,7 +781,30 @@ export class ReverseAnalysisGame {
     glyphNode.textContent = character.glyph;
     imageNode.classList.add("hidden");
 
+    if (side === "player") {
+      this.updatePlayerPortraitState(true);
+      return;
+    }
+
+    this.loadPortraitImage({
+      imageNode,
+      glyphNode,
+      assetPath: character.asset,
+      fallbackAssetPath: null,
+      alt: `${character.name}立绘`,
+    });
+  }
+
+  loadPortraitImage({ imageNode, glyphNode, assetPath, fallbackAssetPath, alt }) {
+    let fallbackUsed = false;
+
     imageNode.onerror = () => {
+      if (!fallbackUsed && fallbackAssetPath && fallbackAssetPath !== assetPath) {
+        fallbackUsed = true;
+        imageNode.src = fallbackAssetPath;
+        return;
+      }
+
       imageNode.classList.add("hidden");
       glyphNode.classList.remove("hidden");
     };
@@ -773,8 +814,64 @@ export class ReverseAnalysisGame {
       glyphNode.classList.add("hidden");
     };
 
-    imageNode.alt = `${character.name}立绘`;
-    imageNode.src = character.asset;
+    imageNode.alt = alt;
+    imageNode.src = assetPath;
+  }
+
+  getDesiredPlayerPortraitMode() {
+    if (this.playerTransientPortraitMode) {
+      return this.playerTransientPortraitMode;
+    }
+
+    if (this.state.currentMode === "buffered-line" && this.state.bufferedContext === "success") {
+      return "welldone";
+    }
+
+    const currentLine = this.state.currentLine;
+    if (currentLine?.speaker === "system" && !currentLine?.speakerName) {
+      return "wait";
+    }
+
+    return "default";
+  }
+
+  getPlayerPortraitAssetByMode(mode) {
+    const player = this.characters.player;
+    if (!player) {
+      return null;
+    }
+
+    if (mode === "default") {
+      return player.asset;
+    }
+
+    return this.playerPortraitAssets[mode] || player.asset;
+  }
+
+  updatePlayerPortraitState(force = false) {
+    const player = this.characters.player;
+    if (!player) {
+      return;
+    }
+
+    const nextMode = this.getDesiredPlayerPortraitMode();
+    if (!force && this.activePlayerPortraitMode === nextMode) {
+      return;
+    }
+
+    this.activePlayerPortraitMode = nextMode;
+    this.loadPortraitImage({
+      imageNode: this.refs.portraitPlayerImage,
+      glyphNode: this.refs.portraitPlayerGlyph,
+      assetPath: this.getPlayerPortraitAssetByMode(nextMode),
+      fallbackAssetPath: player.asset,
+      alt: `${player.name}立绘`,
+    });
+  }
+
+  setPlayerTransientPortrait(mode = null) {
+    this.playerTransientPortraitMode = mode;
+    this.updatePlayerPortraitState();
   }
 
   runCurrentNode() {
@@ -815,6 +912,8 @@ export class ReverseAnalysisGame {
   playNextBufferedLine() {
     const nextLine = this.state.bufferedLines.shift();
     if (!nextLine) {
+      this.state.bufferedContext = null;
+      this.updatePlayerPortraitState();
       const afterCallback = this.state.afterBufferedLines;
       this.state.afterBufferedLines = null;
       if (afterCallback) {
@@ -872,6 +971,7 @@ export class ReverseAnalysisGame {
     this.refs.speakerName.textContent = speaker.name;
     this.refs.dialogueTag.textContent = line.tag || "陈述";
     this.highlightSpeaker(speaker.type);
+    this.updatePlayerPortraitState();
     this.typeText(line.text);
   }
 
@@ -882,6 +982,7 @@ export class ReverseAnalysisGame {
     this.refs.speakerName.textContent = speaker.name;
     this.refs.dialogueTag.textContent = line.tag || "陈述";
     this.highlightSpeaker(speaker.type);
+    this.updatePlayerPortraitState();
     this.refs.dialogueText.textContent = line.text;
     this.refs.dialogueText.classList.remove("dialogue-text--typing");
   }
@@ -1198,12 +1299,14 @@ export class ReverseAnalysisGame {
 
     const successLines = activeNode.stage.successLines || [];
     if (successLines.length > 0) {
+      this.state.bufferedContext = "success";
       this.state.bufferedLines = [...successLines];
       this.state.afterBufferedLines = () => this.runCurrentNode();
       this.playNextBufferedLine();
       return;
     }
 
+    this.state.bufferedContext = null;
     this.runCurrentNode();
   }
 
@@ -1232,6 +1335,7 @@ export class ReverseAnalysisGame {
       const retryStage = this.state.activeStage;
       this.state.activeStage = null;
       this.state.pendingStageRetry = retryStage;
+      this.state.bufferedContext = "failure";
       this.hideChallengeBox();
       this.state.bufferedLines = [...response.lines];
       this.state.afterBufferedLines = () => {
@@ -1245,6 +1349,7 @@ export class ReverseAnalysisGame {
       return;
     }
 
+    this.state.bufferedContext = null;
     this.updateControls();
   }
 
@@ -1432,6 +1537,9 @@ export class ReverseAnalysisGame {
 
     if (options.tone === "fail") {
       this.refs.callout.classList.add("callout--fail");
+      this.setPlayerTransientPortrait("rejection");
+    } else {
+      this.setPlayerTransientPortrait("objection");
     }
 
     void this.refs.callout.offsetWidth;
@@ -1441,6 +1549,7 @@ export class ReverseAnalysisGame {
     this.calloutTimer = window.setTimeout(() => {
       this.refs.callout.classList.remove("callout--show");
       this.refs.callout.classList.add("hidden");
+      this.setPlayerTransientPortrait(null);
       this.calloutTimer = null;
     }, 920);
   }

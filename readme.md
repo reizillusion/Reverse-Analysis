@@ -143,7 +143,7 @@
 ### 方式一：使用 Python
 
 ```powershell
-cd f:\math_
+cd \reverse-analysis\Reverse-Analysis
 python -m http.server 8080
 ```
 
@@ -163,7 +163,7 @@ http://localhost:8080
 ### 方式三：使用 Node.js 静态服务
 
 ```powershell
-cd f:\math_
+cd \reverse-analysis\Reverse-Analysis
 npx serve .
 ```
 
