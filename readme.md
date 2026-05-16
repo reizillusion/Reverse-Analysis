@@ -235,8 +235,6 @@ f:\math_
 
 ### 资源协作文档
 
-如需查看协同命名规范、尺寸建议、补图补音说明，请参考：
-
 - [docs/协作资源清单.md](</f:/math_/docs/协作资源清单.md:1>)
 - [assets/README.md](</f:/math_/assets/README.md:1>)
 
