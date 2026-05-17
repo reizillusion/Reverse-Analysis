@@ -143,7 +143,7 @@
 ### 方式一：使用 Python
 
 ```powershell
-cd f:\math_
+cd \reverse-analysis\Reverse-Analysis
 python -m http.server 8080
 ```
 
@@ -155,7 +155,7 @@ http://localhost:8080
 
 ### 方式二：使用 VS Code Live Server
 
-1. 用 VS Code 打开项目根目录 `f:\math_`
+1. 用 VS Code 打开项目根目录 `\reverse-analysis\Reverse-Analysis`
 2. 安装 `Live Server` 插件
 3. 右键 `index.html`
 4. 选择 `Open with Live Server`
@@ -163,7 +163,7 @@ http://localhost:8080
 ### 方式三：使用 Node.js 静态服务
 
 ```powershell
-cd f:\math_
+cd \reverse-analysis\Reverse-Analysis
 npx serve .
 ```
 
@@ -233,12 +233,6 @@ f:\math_
 - 音频缺失或格式不兼容时，自动回退到 Web Audio 合成音
 - 背景缺失时，仍保留基础氛围层与渐变遮罩，不至于白屏
 
-### 资源协作文档
-
-如需查看协同命名规范、尺寸建议、补图补音说明，请参考：
-
-- [docs/协作资源清单.md](</f:/math_/docs/协作资源清单.md:1>)
-- [assets/README.md](</f:/math_/assets/README.md:1>)
 
 ## 技术实现说明
 
