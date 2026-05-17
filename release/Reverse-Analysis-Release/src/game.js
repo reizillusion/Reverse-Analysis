@@ -236,6 +236,11 @@ export class ReverseAnalysisGame {
       player: null,
       npc: null,
     };
+    this.playerPortraitModes = ["default", "objection", "rejection", "wait", "welldone"];
+    this.playerPortraitLayers = new Map();
+    this.failedPlayerPortraitModes = new Set();
+    this.imagePreloadCache = new Map();
+    this.failedImageAssets = new Set();
     this.playerTransientPortraitMode = null;
     this.activePlayerPortraitMode = "default";
     this.playerPortraitAssets = {
@@ -297,6 +302,7 @@ export class ReverseAnalysisGame {
       evidenceList: document.getElementById("evidence-list"),
       evidenceCount: document.getElementById("evidence-count"),
       portraitPlayer: document.getElementById("portrait-player"),
+      portraitPlayerArt: document.getElementById("portrait-player-art"),
       portraitNpc: document.getElementById("portrait-npc"),
       portraitPlayerName: document.getElementById("portrait-player-name"),
       portraitPlayerRole: document.getElementById("portrait-player-role"),
@@ -330,6 +336,7 @@ export class ReverseAnalysisGame {
   init() {
     this.applyMenuBackdrop();
     this.applyScreenBackdrop(this.refs.screens.splash, MENU_BACKDROP);
+    this.schedulePortraitWarmup();
     this.bindEvents();
     this.renderMenu();
     this.showScreen("splash");
@@ -642,6 +649,7 @@ export class ReverseAnalysisGame {
       return;
     }
 
+    this.schedulePortraitWarmup(caseData, { priority: "high" });
     this.closeOverlay();
     this.state.currentCaseId = caseId;
     this.applyScreenBackdrop(this.refs.screens.intro, caseData.sceneAsset || MENU_BACKDROP);
@@ -687,6 +695,7 @@ export class ReverseAnalysisGame {
       return;
     }
 
+    this.schedulePortraitWarmup(caseData, { priority: "high" });
     this.stopTyping();
     this.closeOverlay();
     this.showScreen("game");
@@ -768,6 +777,113 @@ export class ReverseAnalysisGame {
     return sequence;
   }
 
+  collectPortraitAssets(caseData = null) {
+    const assets = new Set(Object.values(this.playerPortraitAssets).filter(Boolean));
+    const casesToScan = caseData ? [caseData] : this.cases;
+
+    casesToScan.forEach((item) => {
+      if (item?.player?.asset) {
+        assets.add(item.player.asset);
+      }
+
+      if (item?.npc?.asset) {
+        assets.add(item.npc.asset);
+      }
+    });
+
+    return [...assets];
+  }
+
+  schedulePortraitWarmup(caseData = null, options = {}) {
+    const assetPaths = this.collectPortraitAssets(caseData);
+    if (assetPaths.length === 0) {
+      return;
+    }
+
+    const priority = options.priority || "low";
+    const warmup = () => {
+      assetPaths.forEach((assetPath, index) => {
+        this.preloadImageAsset(assetPath, {
+          priority: priority === "high" || index < 2 ? "high" : "low",
+        });
+      });
+    };
+
+    if (priority === "high") {
+      warmup();
+      return;
+    }
+
+    if (typeof window.requestIdleCallback === "function") {
+      window.requestIdleCallback(() => warmup(), { timeout: 1200 });
+      return;
+    }
+
+    window.setTimeout(warmup, 120);
+  }
+
+  preloadImageAsset(assetPath, options = {}) {
+    if (!assetPath || this.failedImageAssets.has(assetPath) || typeof Image === "undefined") {
+      return Promise.resolve(null);
+    }
+
+    const cached = this.imagePreloadCache.get(assetPath);
+    if (cached) {
+      if (options.priority === "high" && "fetchPriority" in cached.image) {
+        cached.image.fetchPriority = "high";
+      }
+      return cached.promise;
+    }
+
+    const image = new Image();
+    image.decoding = "async";
+
+    if ("fetchPriority" in image) {
+      image.fetchPriority = options.priority || "low";
+    }
+
+    const entry = {
+      image,
+      loaded: false,
+      failed: false,
+      promise: null,
+    };
+
+    entry.promise = new Promise((resolve) => {
+      image.onload = () => {
+        const finalize = () => {
+          entry.loaded = true;
+          image.onload = null;
+          image.onerror = null;
+          resolve(entry);
+        };
+
+        if (typeof image.decode === "function") {
+          image.decode().catch(() => {}).finally(finalize);
+          return;
+        }
+
+        finalize();
+      };
+
+      image.onerror = () => {
+        entry.failed = true;
+        this.failedImageAssets.add(assetPath);
+        image.onload = null;
+        image.onerror = null;
+        resolve(entry);
+      };
+    });
+
+    this.imagePreloadCache.set(assetPath, entry);
+    image.src = assetPath;
+    return entry.promise;
+  }
+
+  isImageAssetLoaded(assetPath) {
+    return Boolean(assetPath && this.imagePreloadCache.get(assetPath)?.loaded);
+  }
+
   configurePortrait(side, character) {
     this.characters[side] = character;
 
@@ -780,8 +896,10 @@ export class ReverseAnalysisGame {
     roleNode.textContent = character.role;
     glyphNode.textContent = character.glyph;
     imageNode.classList.add("hidden");
+    this.preloadImageAsset(character.asset, { priority: "high" });
 
     if (side === "player") {
+      this.initializePlayerPortraitLayers(character);
       this.updatePlayerPortraitState(true);
       return;
     }
@@ -795,13 +913,125 @@ export class ReverseAnalysisGame {
     });
   }
 
-  loadPortraitImage({ imageNode, glyphNode, assetPath, fallbackAssetPath, alt }) {
-    let fallbackUsed = false;
+  initializePlayerPortraitLayers(character) {
+    this.failedPlayerPortraitModes.clear();
+    this.playerPortraitLayers.clear();
+
+    const defaultNode = this.refs.portraitPlayerImage;
+    defaultNode.classList.add("hidden");
+    defaultNode.dataset.playerPortraitMode = "default";
+    defaultNode.dataset.ready = "false";
+    this.playerPortraitLayers.set("default", defaultNode);
+    this.configurePlayerPortraitLayer({
+      mode: "default",
+      imageNode: defaultNode,
+      assetPath: character.asset,
+      alt: `${character.name}立绘`,
+    });
+
+    this.refs.portraitPlayerArt
+      .querySelectorAll("[data-player-portrait-extra='true']")
+      .forEach((node) => node.remove());
+
+    this.playerPortraitModes
+      .filter((mode) => mode !== "default")
+      .forEach((mode) => {
+        const imageNode = document.createElement("img");
+        imageNode.alt = "";
+        imageNode.className = "portrait-card__image hidden";
+        imageNode.decoding = "async";
+        if ("fetchPriority" in imageNode) {
+          imageNode.fetchPriority = "high";
+        }
+        imageNode.dataset.playerPortraitExtra = "true";
+        imageNode.dataset.playerPortraitMode = mode;
+        imageNode.dataset.ready = "false";
+        this.refs.portraitPlayerArt.appendChild(imageNode);
+        this.playerPortraitLayers.set(mode, imageNode);
+        this.configurePlayerPortraitLayer({
+          mode,
+          imageNode,
+          assetPath: this.getPlayerPortraitAssetByMode(mode),
+          alt: `${character.name}立绘`,
+        });
+      });
+  }
+
+  configurePlayerPortraitLayer({ mode, imageNode, assetPath, alt }) {
+    if (!imageNode || !assetPath) {
+      return;
+    }
+
+    imageNode.alt = alt;
+    imageNode.dataset.assetPath = assetPath;
+    imageNode.dataset.ready = this.isImageAssetLoaded(assetPath) ? "true" : "false";
+
+    imageNode.onload = () => {
+      imageNode.dataset.ready = "true";
+      if (this.activePlayerPortraitMode === mode) {
+        this.showPlayerPortraitMode(mode);
+      }
+    };
 
     imageNode.onerror = () => {
-      if (!fallbackUsed && fallbackAssetPath && fallbackAssetPath !== assetPath) {
-        fallbackUsed = true;
-        imageNode.src = fallbackAssetPath;
+      imageNode.dataset.ready = "false";
+      this.failedPlayerPortraitModes.add(mode);
+      if (this.activePlayerPortraitMode === mode) {
+        this.showPlayerPortraitMode("default");
+      }
+    };
+
+    this.preloadImageAsset(assetPath, { priority: "high" });
+    imageNode.src = assetPath;
+
+    if (imageNode.complete && imageNode.naturalWidth > 0) {
+      imageNode.dataset.ready = "true";
+    }
+  }
+
+  showPlayerPortraitMode(mode) {
+    const normalizedMode = this.failedPlayerPortraitModes.has(mode) ? "default" : mode;
+    const targetNode = this.playerPortraitLayers.get(normalizedMode) || this.playerPortraitLayers.get("default");
+    const defaultNode = this.playerPortraitLayers.get("default");
+
+    const isReady = (node) => {
+      if (!node) {
+        return false;
+      }
+
+      if (node.dataset.ready === "true") {
+        return true;
+      }
+
+      if (node.complete && node.naturalWidth > 0) {
+        node.dataset.ready = "true";
+        return true;
+      }
+
+      if (this.isImageAssetLoaded(node.dataset.assetPath)) {
+        node.dataset.ready = "true";
+        return true;
+      }
+
+      return false;
+    };
+
+    const visibleNode = isReady(targetNode) ? targetNode : isReady(defaultNode) ? defaultNode : null;
+
+    this.playerPortraitLayers.forEach((node) => {
+      node.classList.toggle("hidden", node !== visibleNode);
+    });
+
+    this.refs.portraitPlayerGlyph.classList.toggle("hidden", Boolean(visibleNode));
+  }
+
+  loadPortraitImage({ imageNode, glyphNode, assetPath, fallbackAssetPath, alt }) {
+    let fallbackUsed = false;
+    const requestToken = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    imageNode.dataset.requestToken = requestToken;
+
+    const showGlyphFallback = () => {
+      if (imageNode.dataset.requestToken !== requestToken) {
         return;
       }
 
@@ -809,13 +1039,45 @@ export class ReverseAnalysisGame {
       glyphNode.classList.remove("hidden");
     };
 
-    imageNode.onload = () => {
+    const revealImage = () => {
+      if (imageNode.dataset.requestToken !== requestToken) {
+        return;
+      }
+
       imageNode.classList.remove("hidden");
       glyphNode.classList.add("hidden");
     };
 
+    imageNode.onerror = () => {
+      if (imageNode.dataset.requestToken !== requestToken) {
+        return;
+      }
+
+      const failedAssetPath = imageNode.dataset.assetPath || assetPath;
+      this.failedImageAssets.add(failedAssetPath);
+      if (!fallbackUsed && fallbackAssetPath && fallbackAssetPath !== assetPath) {
+        fallbackUsed = true;
+        this.preloadImageAsset(fallbackAssetPath, { priority: "high" });
+        imageNode.dataset.assetPath = fallbackAssetPath;
+        imageNode.src = fallbackAssetPath;
+        return;
+      }
+
+      showGlyphFallback();
+    };
+
+    imageNode.onload = () => {
+      revealImage();
+    };
+
     imageNode.alt = alt;
+    this.preloadImageAsset(assetPath, { priority: "high" });
+    imageNode.dataset.assetPath = assetPath;
     imageNode.src = assetPath;
+
+    if (this.isImageAssetLoaded(assetPath)) {
+      revealImage();
+    }
   }
 
   getDesiredPlayerPortraitMode() {
@@ -860,13 +1122,7 @@ export class ReverseAnalysisGame {
     }
 
     this.activePlayerPortraitMode = nextMode;
-    this.loadPortraitImage({
-      imageNode: this.refs.portraitPlayerImage,
-      glyphNode: this.refs.portraitPlayerGlyph,
-      assetPath: this.getPlayerPortraitAssetByMode(nextMode),
-      fallbackAssetPath: player.asset,
-      alt: `${player.name}立绘`,
-    });
+    this.showPlayerPortraitMode(nextMode);
   }
 
   setPlayerTransientPortrait(mode = null) {
