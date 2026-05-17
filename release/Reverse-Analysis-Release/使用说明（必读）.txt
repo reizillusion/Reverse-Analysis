@@ -1,0 +1,7 @@
+标准启动步骤
+
+1. 如果收到的是 `Reverse-Analysis-Release.zip`，请先完整解压到本地普通文件夹，不要在压缩包预览中直接运行。
+2. 打开发布目录 `Reverse-Analysis-Release`。
+3. 双击 `Start-Reverse-Analysis.bat`。
+4. 程序会自动启动本地服务，并在默认浏览器中打开游戏。
+5. 游戏结束后，关闭启动脚本窗口即可停止本地服务。
