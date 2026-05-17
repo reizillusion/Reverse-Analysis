@@ -1,0 +1,11 @@
+Reverse Analysis - Release Guide
+
+1. If you received a zip file, extract it to a normal folder first
+2. Double-click "Start-Reverse-Analysis.bat"
+3. Your browser should open automatically
+4. Close the script window when you want to stop the local service
+
+Notes:
+- Do not open index.html directly
+- If the browser does not open automatically, use the local address shown in the script window
+- If updated assets do not appear, press Ctrl + F5 in the browser

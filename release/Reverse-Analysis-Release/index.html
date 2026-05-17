@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>逆转数分</title>
+    <meta
+      name="description"
+      content="逆转裁判风格的数学分析推理游戏：在校园场景中用定义、定理与反例击破错误证明。"
+    />
+    <link rel="stylesheet" href="./styles/main.css" />
+  </head>
+  <body>
+    <div class="app-shell" id="app">
+      <div class="chrome-line chrome-line--top"></div>
+      <div class="chrome-line chrome-line--bottom"></div>
+
+      <section class="screen screen--splash" data-screen="splash" id="splash-screen" tabindex="0" aria-label="启动页">
+        <div class="splash-stage">
+          <img
+            src="./assets/ui/logo-reverse-analysis.png"
+            alt="逆转数分 标题"
+            class="splash-stage__logo"
+            id="splash-logo"
+          />
+          <p class="splash-stage__hint">点击屏幕开始</p>
+        </div>
+      </section>
+
+      <section class="screen screen--menu hidden" data-screen="menu">
+        <div class="hero-panel">
+          <p class="hero-panel__eyebrow">Reverse Analysis</p>
+          <h1 class="hero-panel__title">逆转数分</h1>
+          <p class="hero-panel__subtitle">
+            在校园里的宿舍、图书馆、研讨间与湖边拆穿错误证明。从一元分析到多元积分、曲线积分与微分方程，每一句证词都必须经得起定义、定理与反例的拷问。
+          </p>
+          <div class="hero-panel__actions">
+            <button class="button button--primary" id="continue-btn">继续案件</button>
+            <button class="button button--ghost" id="reset-progress-btn">重置进度</button>
+          </div>
+        </div>
+
+        <div class="case-board">
+          <div class="case-board__header">
+            <div>
+              <p class="section-label">案件目录</p>
+              <h2>六段错误论证，六次公开质询</h2>
+            </div>
+            <p class="case-board__hint">案件按顺序解锁，已完成进度会保存在本地。</p>
+          </div>
+          <div class="case-grid" id="case-grid"></div>
+        </div>
+      </section>
+
+      <section class="screen screen--intro hidden" data-screen="intro">
+        <div class="intro-card" id="intro-card"></div>
+      </section>
+
+      <section class="screen screen--game hidden" data-screen="game">
+        <div class="backdrop-grid"></div>
+        <div class="scene-radiance"></div>
+
+        <header class="status-bar">
+          <div class="status-chip">
+            <span class="status-chip__label">当前案件</span>
+            <strong id="case-title">-</strong>
+          </div>
+          <div class="status-chip">
+            <span class="status-chip__label">场景</span>
+            <strong id="scene-label">-</strong>
+          </div>
+          <div class="status-meter">
+            <span class="status-chip__label">信誉值</span>
+            <div class="meter" id="credibility-meter" aria-label="信誉值"></div>
+          </div>
+          <button class="button button--ghost button--small" id="mute-btn">音效：开</button>
+        </header>
+
+        <main class="arena">
+          <section class="arena__stage">
+            <div class="case-ribbon">
+              <span class="case-ribbon__text" id="objective-text">-</span>
+            </div>
+
+            <div class="portrait-deck">
+              <article class="portrait-card" id="portrait-player">
+                <div class="portrait-card__art" id="portrait-player-art">
+                  <img alt="" class="portrait-card__image hidden" id="portrait-player-image" />
+                  <span class="portrait-card__glyph" id="portrait-player-glyph">许</span>
+                </div>
+                <div class="portrait-card__meta">
+                  <strong id="portrait-player-name">-</strong>
+                  <span id="portrait-player-role">-</span>
+                </div>
+              </article>
+
+              <article class="portrait-card portrait-card--npc" id="portrait-npc">
+                <div class="portrait-card__art" id="portrait-npc-art">
+                  <img alt="" class="portrait-card__image hidden" id="portrait-npc-image" />
+                  <span class="portrait-card__glyph" id="portrait-npc-glyph">林</span>
+                </div>
+                <div class="portrait-card__meta">
+                  <strong id="portrait-npc-name">-</strong>
+                  <span id="portrait-npc-role">-</span>
+                </div>
+              </article>
+            </div>
+
+            <div class="signal-banner hidden" id="signal-banner"></div>
+          </section>
+
+          <aside class="arena__evidence">
+            <div class="panel-heading">
+              <div>
+                <p class="section-label">证据档案</p>
+                <h2>定义 / 定理 / 反例</h2>
+              </div>
+              <span class="panel-heading__count" id="evidence-count">0</span>
+            </div>
+            <div class="evidence-list" id="evidence-list"></div>
+          </aside>
+        </main>
+
+        <section class="dialogue-panel" id="dialogue-panel">
+          <div class="dialogue-panel__header">
+            <div>
+              <p class="section-label">校园质询</p>
+              <h2 id="speaker-name">-</h2>
+            </div>
+            <span class="dialogue-tag" id="dialogue-tag">陈述</span>
+          </div>
+
+          <p class="dialogue-text" id="dialogue-text"></p>
+
+          <div class="challenge-box hidden" id="challenge-box">
+            <div class="challenge-box__header">
+              <strong id="challenge-counter">反驳环节</strong>
+              <span id="challenge-mode">待行动</span>
+            </div>
+            <p class="challenge-box__prompt" id="challenge-prompt"></p>
+            <div class="choice-list" id="choice-list"></div>
+          </div>
+
+          <div class="control-row">
+            <button class="button button--accent" id="present-btn" disabled>出示证据</button>
+            <button class="button button--primary" id="next-btn">下一句</button>
+            <button class="button button--ghost" id="skip-btn" disabled>跳过打字</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="screen screen--ending hidden" data-screen="ending">
+        <div class="ending-card" id="ending-card"></div>
+      </section>
+
+      <div class="overlay hidden" id="overlay" aria-hidden="true">
+        <div class="overlay__scrim" id="overlay-scrim"></div>
+        <div class="overlay__panel" id="overlay-panel"></div>
+      </div>
+
+      <div class="callout hidden" id="callout"></div>
+      <div class="toast-stack" id="toast-stack"></div>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

@@ -135,44 +135,36 @@
 
 ## 启动方式
 
-本项目是纯前端静态页面，使用 ES Module。  
-不要直接双击 `index.html` 以 `file://` 方式打开，否则模块导入、背景图、音频等功能可能异常。
+当前发布版面向普通 Windows 用户，已内置本地启动脚本。  
+使用时无需额外安装 Python、Node.js、VS Code 或其他开发环境。
 
-推荐在项目根目录 `f:\math_` 下启动一个本地 HTTP 服务。
+请勿直接双击 `index.html` 或以 `file://` 方式打开项目，否则 ES Module、背景图、音频等资源可能无法正常加载。
 
-### 方式一：使用 Python
+### 标准启动步骤
 
-```powershell
-cd \reverse-analysis\Reverse-Analysis
-python -m http.server 8080
-```
+1. 如果收到的是 `Reverse-Analysis-Release.zip`，请先完整解压到本地普通文件夹，不要在压缩包预览中直接运行。
+2. 打开发布目录 `Reverse-Analysis-Release`。
+3. 双击 `Start-Reverse-Analysis.bat`。
+4. 程序会自动启动本地服务，并在默认浏览器中打开游戏。
+5. 游戏结束后，关闭启动脚本窗口即可停止本地服务。
 
-浏览器访问：
+### 启动文件说明
 
-```text
-http://localhost:8080
-```
+- `Start-Reverse-Analysis.bat`
+  - 面向普通用户的默认启动入口
+  - 会自动调用同目录下的 PowerShell 启动脚本
 
-### 方式二：使用 VS Code Live Server
+- `Start-Reverse-Analysis.ps1`
+  - 实际执行本地静态服务的脚本
+  - 通常无需手动运行，除非需要排查启动问题
 
-1. 用 VS Code 打开项目根目录 `\reverse-analysis\Reverse-Analysis`
-2. 安装 `Live Server` 插件
-3. 右键 `index.html`
-4. 选择 `Open with Live Server`
+### 使用注意事项
 
-### 方式三：使用 Node.js 静态服务
-
-```powershell
-cd \reverse-analysis\Reverse-Analysis
-npx serve .
-```
-
-### 启动注意事项
-
-- 项目不依赖 `npm install`
-- 入口文件是 `index.html`
-- 若浏览器首次不播放音效，通常是自动播放策略限制；点击页面后即可恢复
-- 若资源刚更新但页面效果未变化，先执行一次 `Ctrl + F5` 强制刷新缓存
+- 首次启动时，Windows 可能弹出 PowerShell 或浏览器权限提示，允许后即可继续。
+- 若浏览器没有自动打开，请查看脚本窗口中显示的本地地址，通常形如 `http://127.0.0.1:87xx/`。
+- 若浏览器首次不播放音效，通常是自动播放策略限制；点击页面后即可恢复。
+- 若资源刚更新但页面效果未变化，先执行一次 `Ctrl + F5` 强制刷新缓存。
+- 运行期间请保持发布目录结构完整，不要单独移动 `index.html`、`assets`、`src` 或 `styles`。
 
 ## 目录结构
 
