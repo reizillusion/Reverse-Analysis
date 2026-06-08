@@ -22,6 +22,7 @@ New-Item -ItemType Directory -Path $packageRoot -Force | Out-Null
 
 $copyTargets = @(
   "assets",
+  "music",
   "src",
   "styles",
   "index.html",

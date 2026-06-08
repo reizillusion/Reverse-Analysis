@@ -61,6 +61,7 @@ function Get-ContentType {
     ".webp" { return "image/webp" }
     ".ico" { return "image/x-icon" }
     ".ogg" { return "audio/ogg" }
+    ".mp3" { return "audio/mpeg" }
     ".wav" { return "audio/wav" }
     ".flac" { return "audio/flac" }
     ".txt" { return "text/plain; charset=utf-8" }

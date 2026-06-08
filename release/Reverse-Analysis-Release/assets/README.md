@@ -11,6 +11,7 @@
 - `assets/images/portraits/`
 - `assets/images/backgrounds/`
 - `assets/audio/`
+- `music/`
 - `assets/ui/`
 
 具体文件建议命名与规格见 `docs/协作资源清单.md`。

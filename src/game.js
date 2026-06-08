@@ -8,6 +8,11 @@ class AudioManager {
     this.assetTemplates = new Map();
     this.unavailableAssets = new Set();
     this.activePlayers = new Set();
+    this.musicPlayer = null;
+    this.currentMusicKey = null;
+    this.requestedMusicKey = null;
+    this.unavailableMusic = new Set();
+    this.musicVolume = 0.3;
     this.assetConfig = {
       ui: { src: "assets/audio/ui-click.wav", volume: 0.45 },
       objection: { src: "assets/audio/objection.flac", volume: 0.72 },
@@ -16,13 +21,26 @@ class AudioManager {
       scene: { src: "assets/audio/scene-transition.wav", volume: 0.6 },
       end: { src: "assets/audio/end.ogg", volume: 0.68 },
     };
+    this.musicConfig = {
+      menu: "music/0.mp3",
+      "case-1": "music/1.mp3",
+      "case-2": "music/2.mp3",
+      "case-3": "music/3.mp3",
+      "case-4": "music/4.mp3",
+      "case-5": "music/5.mp3",
+      "case-6": "music/6.mp3",
+    };
   }
 
   setEnabled(enabled) {
     this.enabled = enabled;
     if (!enabled) {
       this.stopActivePlayers();
+      this.pauseMusic();
+      return;
     }
+
+    this.resumeRequestedMusic();
   }
 
   ensureContext() {
@@ -92,6 +110,88 @@ class AudioManager {
     this.activePlayers.clear();
   }
 
+  pauseMusic() {
+    if (!this.musicPlayer) {
+      return;
+    }
+
+    this.musicPlayer.pause();
+  }
+
+  stopMusic() {
+    if (!this.musicPlayer) {
+      return;
+    }
+
+    this.musicPlayer.pause();
+    this.musicPlayer.currentTime = 0;
+    this.musicPlayer = null;
+    this.currentMusicKey = null;
+  }
+
+  playMenuMusic() {
+    this.playMusic("menu");
+  }
+
+  playCaseMusic(order) {
+    this.playMusic(`case-${order}`);
+  }
+
+  playMusic(key) {
+    this.requestedMusicKey = key;
+
+    if (!this.enabled || typeof Audio === "undefined") {
+      return;
+    }
+
+    const src = this.musicConfig[key];
+    if (!src || this.unavailableMusic.has(key)) {
+      return;
+    }
+
+    if (this.currentMusicKey === key && this.musicPlayer) {
+      this.musicPlayer.volume = this.musicVolume;
+      this.resumeRequestedMusic();
+      return;
+    }
+
+    this.stopMusic();
+
+    const player = new Audio(src);
+    player.loop = true;
+    player.preload = "auto";
+    player.volume = this.musicVolume;
+    player.onerror = () => {
+      this.unavailableMusic.add(key);
+      if (this.musicPlayer === player) {
+        this.musicPlayer = null;
+        this.currentMusicKey = null;
+      }
+    };
+
+    this.musicPlayer = player;
+    this.currentMusicKey = key;
+    this.resumeRequestedMusic();
+  }
+
+  resumeRequestedMusic() {
+    if (!this.enabled || !this.requestedMusicKey || typeof Audio === "undefined") {
+      return;
+    }
+
+    if (!this.musicPlayer || this.currentMusicKey !== this.requestedMusicKey) {
+      const requestedKey = this.requestedMusicKey;
+      this.playMusic(requestedKey);
+      return;
+    }
+
+    this.musicPlayer.volume = this.musicVolume;
+    const playPromise = this.musicPlayer.play();
+    if (playPromise?.catch) {
+      playPromise.catch(() => {});
+    }
+  }
+
   getAssetTemplate(name) {
     if (this.unavailableAssets.has(name) || typeof Audio === "undefined") {
       return null;
@@ -115,6 +215,8 @@ class AudioManager {
     if (!this.enabled) {
       return;
     }
+
+    this.resumeRequestedMusic();
 
     const template = this.getAssetTemplate(name);
     if (!template) {
@@ -232,6 +334,7 @@ export class ReverseAnalysisGame {
     this.ending = ending;
     this.audio = new AudioManager();
     this.calloutTimer = null;
+    this.splashMusicStarted = false;
     this.characters = {
       player: null,
       npc: null,
@@ -289,6 +392,7 @@ export class ReverseAnalysisGame {
         ending: document.querySelector('[data-screen="ending"]'),
       },
       splashScreen: document.getElementById("splash-screen"),
+      splashHint: document.getElementById("splash-hint"),
       caseGrid: document.getElementById("case-grid"),
       continueButton: document.getElementById("continue-btn"),
       resetButton: document.getElementById("reset-progress-btn"),
@@ -340,12 +444,12 @@ export class ReverseAnalysisGame {
     this.bindEvents();
     this.renderMenu();
     this.showScreen("splash");
+    this.audio.playMenuMusic();
   }
 
   bindEvents() {
     this.refs.splashScreen.addEventListener("click", () => {
-      this.audio.ui();
-      this.enterMenuFromSplash();
+      this.handleSplashInteraction();
     });
 
     this.refs.splashScreen.addEventListener("keydown", (event) => {
@@ -354,8 +458,7 @@ export class ReverseAnalysisGame {
       }
 
       event.preventDefault();
-      this.audio.ui();
-      this.enterMenuFromSplash();
+      this.handleSplashInteraction();
     });
 
     this.refs.caseGrid.addEventListener("click", (event) => {
@@ -590,7 +693,7 @@ export class ReverseAnalysisGame {
   }
 
   renderMuteButton() {
-    this.refs.muteButton.textContent = this.state.save.muted ? "音效：关" : "音效：开";
+    this.refs.muteButton.textContent = this.state.save.muted ? "音频：关" : "音频：开";
   }
 
   enterMenuFromSplash() {
@@ -600,6 +703,26 @@ export class ReverseAnalysisGame {
 
     this.applyMenuBackdrop();
     this.showScreen("menu");
+    this.audio.playMenuMusic();
+  }
+
+  handleSplashInteraction() {
+    if (this.state.screen !== "splash") {
+      return;
+    }
+
+    this.audio.ui();
+    this.audio.playMenuMusic();
+
+    if (!this.state.save.muted && !this.splashMusicStarted) {
+      this.splashMusicStarted = true;
+      if (this.refs.splashHint) {
+        this.refs.splashHint.textContent = "再次点击开始";
+      }
+      return;
+    }
+
+    this.enterMenuFromSplash();
   }
 
   applyScreenBackdrop(screenNode, assetPath) {
@@ -655,6 +778,7 @@ export class ReverseAnalysisGame {
     this.applyScreenBackdrop(this.refs.screens.intro, caseData.sceneAsset || MENU_BACKDROP);
     this.refs.introCard.innerHTML = this.renderIntroCard(caseData);
     this.showScreen("intro");
+    this.audio.playCaseMusic(caseData.order);
     this.audio.scene();
   }
 
@@ -727,6 +851,7 @@ export class ReverseAnalysisGame {
     this.renderEvidence();
     this.hideSignalBanner();
     this.hideChallengeBox();
+    this.audio.playCaseMusic(caseData.order);
     this.audio.scene();
     this.showToast("案件开始", `资料已整理完毕：${caseData.initialEvidence.length} 张证据卡待你调度。`);
     this.runCurrentNode();
@@ -1704,6 +1829,7 @@ export class ReverseAnalysisGame {
     const currentCase = this.getCurrentCase();
     this.applyScreenBackdrop(this.refs.screens.ending, currentCase?.sceneAsset || MENU_BACKDROP);
     this.showScreen("ending");
+    this.audio.playMenuMusic();
     const facts = this.ending.facts
       .map((item) => {
         return `
@@ -1737,6 +1863,7 @@ export class ReverseAnalysisGame {
     this.closeOverlay();
     this.renderMenu();
     this.showScreen("menu");
+    this.audio.playMenuMusic();
   }
 
   openOverlay(content, { closable }) {
