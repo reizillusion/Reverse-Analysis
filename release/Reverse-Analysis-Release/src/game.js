@@ -12,7 +12,7 @@ class AudioManager {
     this.currentMusicKey = null;
     this.requestedMusicKey = null;
     this.unavailableMusic = new Set();
-    this.musicVolume = 0.3;
+    this.musicVolume = 0.2;
     this.assetConfig = {
       ui: { src: "assets/audio/ui-click.wav", volume: 0.45 },
       objection: { src: "assets/audio/objection.flac", volume: 0.72 },
