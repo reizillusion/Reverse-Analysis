@@ -1,5 +1,5 @@
 const SAVE_KEY = "reverse-analysis-save";
-const MENU_BACKDROP = "assets/images/backgrounds/menu-hall.jpg";
+const MENU_BACKDROP = "assets/images/backgrounds/menu-hall.png";
 
 class AudioManager {
   constructor() {
