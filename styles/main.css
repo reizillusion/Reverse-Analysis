@@ -685,7 +685,10 @@ img {
   padding: 24px;
   display: flex;
   flex-direction: column;
-  min-height: 420px;
+  min-height: 0;
+  height: 420px;
+  max-height: min(52vh, 520px);
+  overflow: hidden;
 }
 
 .panel-heading__count {
@@ -698,11 +701,35 @@ img {
 }
 
 .evidence-list {
+  flex: 1;
+  min-height: 0;
   margin-top: 22px;
   display: grid;
   gap: 12px;
-  overflow: auto;
-  padding-right: 6px;
+  align-content: start;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 8px;
+  scrollbar-gutter: stable;
+}
+
+.evidence-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.evidence-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+}
+
+.evidence-list::-webkit-scrollbar-thumb {
+  background: rgba(240, 213, 155, 0.28);
+  border-radius: 999px;
+}
+
+.evidence-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(240, 213, 155, 0.42);
 }
 
 .evidence-card {
@@ -1148,7 +1175,9 @@ img {
   }
 
   .arena__evidence {
-    min-height: 0;
+    min-height: 300px;
+    height: min(44vh, 420px);
+    max-height: 420px;
   }
 
   .evidence-list {
@@ -1220,6 +1249,12 @@ img {
 
   .portrait-card {
     width: 100%;
+  }
+
+  .arena__evidence {
+    min-height: 260px;
+    height: min(48vh, 360px);
+    max-height: 360px;
   }
 
   .control-row {
