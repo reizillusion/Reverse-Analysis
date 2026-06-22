@@ -15,7 +15,7 @@ class AudioManager {
     this.musicVolume = 0.2;
     this.assetConfig = {
       ui: { src: "assets/audio/ui-click.wav", volume: 0.45 },
-      objection: { src: "assets/audio/objection.flac", volume: 0.72 },
+      objection: { src: "assets/audio/objection.mp3", volume: 0.72 },
       success: { src: "assets/audio/success.wav", volume: 0.58 },
       fail: { src: "assets/audio/fail.wav", volume: 0.58 },
       scene: { src: "assets/audio/scene-transition.wav", volume: 0.6 },

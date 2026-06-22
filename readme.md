@@ -213,7 +213,7 @@ f:\math_
   - 位于 `assets/audio/`
   - 当前已接入音效：
     - `ui-click.wav`
-    - `objection.flac`
+    - `objection.mp3`
     - `success.wav`
     - `fail.wav`
     - `scene-transition.wav`
