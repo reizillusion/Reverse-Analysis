@@ -554,7 +554,7 @@ img {
 
 .arena__stage {
   position: relative;
-  min-height: 520px;
+  min-height: 580px;
   padding: 28px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--line);
@@ -686,8 +686,8 @@ img {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  height: min(62vh, 560px);
-  max-height: 560px;
+  height: min(68vh, 620px);
+  max-height: 620px;
   overflow: hidden;
 }
 
@@ -1176,8 +1176,8 @@ img {
 
   .arena__evidence {
     min-height: 300px;
-    height: min(48vh, 460px);
-    max-height: 460px;
+    height: min(54vh, 520px);
+    max-height: 520px;
   }
 
   .evidence-list {
@@ -1209,7 +1209,7 @@ img {
   }
 
   .arena__stage {
-    min-height: 520px;
+    min-height: 560px;
   }
 
   .intro-card__facts,
@@ -1253,8 +1253,8 @@ img {
 
   .arena__evidence {
     min-height: 260px;
-    height: min(52vh, 380px);
-    max-height: 380px;
+    height: min(56vh, 430px);
+    max-height: 430px;
   }
 
   .control-row {
